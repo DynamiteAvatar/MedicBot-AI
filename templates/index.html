@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MedicBotAI</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Clean, Medical White & Blue Palette */
+            --bg-light: #e0e5ec; /* Base background for neumorphism */
+            --primary-blue: #007bff; /* Main accent blue */
+            --secondary-blue: #6c5ce7; /* Soft violet-blue for mic/accents */
+            --text-dark: #333d4d; /* Dark text for contrast */
+            --text-light: #ffffff; /* White text for blue elements */
+
+            /* Neumorphism Shadows */
+            --shadow-light: rgba(255, 255, 255, 0.7); /* Top-left highlight */
+            --shadow-dark: rgba(174, 174, 192, 0.4);  /* Bottom-right shadow */
+            --shadow-inner-light: rgba(255, 255, 255, 0.5); /* Inner shadow for recessed elements */
+            --shadow-inner-dark: rgba(174, 174, 192, 0.2);  /* Inner shadow for recessed elements */
+
+            /* Glassmorphism */
+            --glass-bg: rgba(255, 255, 255, 0.15); /* Base background for glass panels */
+            --glass-border: rgba(255, 255, 255, 0.4); /* Border for glass panels */
+            --suggestion-overlay-bg: rgba(255, 255, 255, 0.6); /* More opaque glass for suggestions */
+            --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2); /* Soft glass shadow */
+            --glass-glow: 0 0 20px rgba(0, 123, 255, 0.2); /* Subtle blue glow for glass */
+
+            /* Other Accents */
+            --success-green: #28a745;
+            --error-red: #dc3545;
+            --warning-orange: #ffc107; /* For save prompt */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #f0f4f8 0%, #dce4eb 100%); /* Very light, subtle blue-white gradient */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            box-sizing: border-box;
+            color: var(--text-dark);
+            overflow: hidden; /* For panel transitions */
+        }
+
+        .chat-container {
+            display: flex;
+            flex-direction: column;
+            width: 100%;
+            max-width: 650px; /* Optimal width for chat */
+            height: 90vh;
+            max-height: 800px; /* Consistent height */
+            background-color: var(--bg-light); /* Neumorphic base color */
+            border-radius: 30px;
+            /* Neumorphic shadow */
+            box-shadow: 10px 10px 20px var(--shadow-dark), -10px -10px 20px var(--shadow-light);
+            overflow: hidden;
+            animation: containerEnter 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+            position: relative; /* For z-index stacking */
+            z-index: 1;
+            transform: scale(0.98); /* Initial subtle scale for animation */
+        }
+
+        @keyframes containerEnter {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .chat-header-area {
+            position: relative;
+            padding: 25px 35px 15px;
+            background-color: var(--bg-light); /* Match container for seamless neumorphism */
+            border-radius: 30px 30px 0 0;
+            text-align: center;
+            /* Soft recessed look for header */
+            box-shadow: inset 5px 5px 10px var(--shadow-inner-dark), inset -5px -5px 10px var(--shadow-inner-light);
+            z-index: 2; /* Above chat content */
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start; /* Align title and selector */
+        }
+
+        .header-left {
+            text-align: left;
+            flex-grow: 1;
+        }
+
+        .chat-header-area h1 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 5px;
+            color: var(--primary-blue); /* Distinct blue for title */
+            text-shadow: 0 2px 5px rgba(0, 123, 255, 0.1);
+        }
+        .chat-header-area p {
+            font-size: 1rem;
+            font-weight: 400;
+            opacity: 0.9;
+            color: var(--text-dark);
+        }
+
+        .language-selector-wrapper {
+            /* Positioned within the flex container now */
+            padding: 6px;
+            background-color: var(--bg-light); /* Neumorphic background */
+            border-radius: 25px;
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); /* Embossed look */
+            align-self: flex-start; /* Align to top-right of header flex */
+            margin-top: 5px; /* Slight offset from top */
+        }
+        .language-selector {
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            border: none;
+            border-radius: 20px;
+            padding: 8px 20px;
+            font-size: 0.9rem;
+            font-weight: 500;
+            cursor: pointer;
+            outline: none;
+            appearance: none;
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            background-image: url('data:image/svg+xml;charset=US-ASCII,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%22292.4%22%20height%3D%22292.4%22%20viewBox%3D%220%200%20292.4%20292.4%22%3E%3Cpath%20fill%3D%22%23333d4d%22%20d%3D%22M287%2069.4a17.6%2017.6%200%2000-13%205.7L146.2%20202.7%2018.8%2075.1c-6.8-6.8-17.6-6.8-24.4%200-6.8%206.8-6.8%2017.6%200%2024.4l130.5%20130.5c6.8%206.8%2017.6%206.8%2024.4%200l130.5-130.5c6.8-6.8%206.8-17.6%200-24.4a17.6%2017.6%200%2000-13-5.7z%22%2F%3E%3C%2Fsvg%3E'); /* Dark arrow */
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            background-size: 14px auto;
+            transition: all 0.3s ease;
+        }
+        .language-selector:hover {
+            background-color: #f0f4f8; /* Slightly lighter on hover */
+            box-shadow: inset 1px 1px 3px var(--shadow-inner-dark), inset -1px -1px 3px var(--shadow-inner-light);
+        }
+        .language-selector option {
+            background-color: var(--bg-light); /* Keep options consistent */
+            color: var(--text-dark);
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            padding: 20px 30px; /* Reduced top padding as language selector is not overlapping */
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            scroll-behavior: smooth;
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .chat-messages::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .message {
+            max-width: 85%;
+            padding: 15px 20px;
+            border-radius: 20px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            word-wrap: break-word;
+            transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            animation: messagePopUp 0.4s ease-out forwards; /* Animated entry */
+            position: relative; /* For speaker icon */
+        }
+
+        @keyframes messagePopUp {
+            from { opacity: 0; transform: translateY(15px) scale(0.95); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        .message.user {
+            background-color: var(--primary-blue); /* Solid blue for user */
+            color: var(--text-light);
+            align-self: flex-end;
+            margin-left: auto;
+            border-bottom-right-radius: 8px; /* Slight asymmetry */
+            box-shadow: 5px 5px 10px rgba(0, 123, 255, 0.2); /* Soft blue shadow */
+        }
+        .message.bot {
+            background-color: var(--bg-light); /* White for bot */
+            color: var(--text-dark);
+            align-self: flex-start;
+            margin-right: auto;
+            border-bottom-left-radius: 8px; /* Slight asymmetry */
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light); /* Soft neumorphic shadow */
+        }
+
+        /* Speaker icon styling */
+        .message.bot .speaker-icon {
+            position: absolute;
+            top: 50%;
+            left: calc(100% + 10px); /* Position to the right of the bubble */
+            transform: translateY(-50%);
+            width: 22px;
+            height: 22px;
+            color: var(--primary-blue); /* Blue icon */
+            cursor: pointer;
+            opacity: 0.8;
+            transition: all 0.2s ease-out;
+        }
+        .message.bot .speaker-icon:hover {
+            color: var(--secondary-blue); /* Purple on hover */
+            transform: translateY(-50%) scale(1.1);
+            opacity: 1;
+        }
+        .message.bot .speaker-icon.speaking {
+            color: var(--success-green); /* Green when speaking */
+            animation: pulse-speaker 1.5s infinite;
+        }
+        @keyframes pulse-speaker {
+            0% { transform: translateY(-50%) scale(1); opacity: 1; }
+            50% { transform: translateY(-50%) scale(1.1); opacity: 0.9; }
+            100% { transform: translateY(-50%) scale(1); opacity: 1; }
+        }
+
+        .typing-indicator {
+            align-self: flex-start;
+            font-style: italic;
+            color: var(--text-dark);
+            margin-left: 20px;
+            font-size: 0.85rem;
+            padding: 8px 15px;
+            background-color: var(--bg-light);
+            border-radius: 20px;
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            display: flex;
+            align-items: center;
+            animation: messagePopUp 0.4s ease-out forwards;
+        }
+        .typing-indicator span {
+            display: inline-block;
+            width: 7px;
+            height: 7px;
+            background-color: var(--primary-blue);
+            border-radius: 50%;
+            margin: 0 3px;
+            animation: bounce 1.4s infinite ease-in-out;
+        }
+        .typing-indicator span:nth-child(2) { animation-delay: 0.2s; }
+        .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes bounce {
+            0%, 80%, 100% { transform: translateY(0); opacity: 0.7; }
+            40% { transform: translateY(-4px); opacity: 1; }
+        }
+
+        .chat-input-area {
+            display: flex;
+            padding: 20px 30px;
+            gap: 12px;
+            background-color: var(--bg-light);
+            border-top: 1px solid rgba(0,0,0,0.05); /* Very subtle separator */
+            border-radius: 0 0 30px 30px;
+            /* Recessed look for the entire input area */
+            box-shadow: inset 5px 5px 10px var(--shadow-inner-dark), inset -5px -5px 10px var(--shadow-inner-light);
+        }
+        .chat-input {
+            flex-grow: 1;
+            border: none;
+            border-radius: 25px;
+            padding: 12px 20px;
+            font-size: 0.95rem;
+            outline: none;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            /* Recessed input field */
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            transition: all 0.3s ease;
+        }
+        .chat-input::placeholder {
+            color: #8b96a9; /* Muted placeholder */
+        }
+        .chat-input:focus {
+            background-color: #f0f4f8; /* Slightly lighter on focus */
+            box-shadow: inset 1px 1px 3px var(--shadow-inner-dark), inset -1px -1px 3px var(--shadow-inner-light);
+        }
+        
+        .chat-button {
+            background-color: var(--bg-light); /* Base for neumorphism */
+            color: var(--primary-blue); /* Icon color */
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            /* Embossed button effect */
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            transition: all 0.2s ease-out;
+            outline: none;
+            border: none;
+            flex-shrink: 0;
+        }
+        .chat-button:hover {
+            /* De-bossed effect on hover */
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            transform: scale(0.98);
+        }
+        .chat-button:active {
+            /* Pressed effect */
+            box-shadow: inset 3px 3px 7px var(--shadow-inner-dark), inset -1px -1px 2px var(--shadow-inner-light);
+            transform: scale(0.95);
+        }
+
+        .mic-button {
+            color: var(--secondary-blue); /* Purple icon */
+        }
+        .mic-button.active {
+            background-color: var(--success-green); /* Green when active */
+            color: white; /* White icon when active */
+            box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7);
+            animation: pulse-green 1.5s infinite;
+        }
+        @keyframes pulse-green {
+            0% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0.7); }
+            70% { box-shadow: 0 0 0 15px rgba(40, 167, 69, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(40, 167, 69, 0); }
+        }
+        
+        .message.error-message {
+            background-color: var(--error-red);
+            color: var(--text-light);
+            font-weight: 500;
+            box-shadow: 5px 5px 10px rgba(220, 53, 69, 0.2);
+        }
+        .message.save-prompt, .message.patient-info-prompt {
+            background-color: var(--warning-orange); /* Orange for prompts */
+            color: var(--text-light);
+            font-weight: 500;
+            box-shadow: 5px 5px 10px rgba(255, 193, 7, 0.2);
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            align-self: center; /* Center the prompt message */
+            max-width: 90%;
+        }
+        .message.save-prompt .prompt-buttons, .message.patient-info-prompt .prompt-buttons {
+            display: flex;
+            gap: 10px;
+            justify-content: center;
+            margin-top: 5px;
+        }
+        .message.save-prompt .prompt-buttons button, .message.patient-info-prompt .prompt-buttons button {
+            background-color: var(--bg-light); /* Neumorphic for prompt buttons */
+            color: var(--text-dark);
+            padding: 8px 15px;
+            border-radius: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light);
+            transition: all 0.2s ease-out;
+        }
+        .message.save-prompt .prompt-buttons button:hover, .message.patient-info-prompt .prompt-buttons button:hover {
+            box-shadow: inset 1px 1px 3px var(--shadow-inner-dark), inset -1px -1px 3px var(--shadow-inner-light);
+            transform: scale(0.98);
+        }
+        .message.save-prompt .prompt-buttons button:active, .message.patient-info-prompt .prompt-buttons button:active {
+            transform: scale(0.95);
+        }
+
+        #voice-status-message {
+            text-align: center;
+            font-size: 0.85rem;
+            color: var(--text-dark);
+            padding: 8px 0;
+            min-height: 20px;
+            opacity: 0.7;
+            transition: all 0.3s ease-out;
+        }
+        #voice-status-message.text-red-600 { /* This class is still used by JS */
+            background-color: rgba(220, 53, 69, 0.1);
+            border-radius: 15px;
+            padding: 8px 15px;
+            margin: 5px auto;
+            box-shadow: 0 2px 8px rgba(220, 53, 69, 0.15);
+            font-weight: 600;
+            color: var(--error-red);
+            max-width: 80%;
+            border: 1px solid rgba(220, 53, 69, 0.2);
+            animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+            transform-origin: center center;
+        }
+        @keyframes shake {
+            10%, 90% { transform: translate3d(-1px, 0, 0); }
+            20%, 80% { transform: translate3d(2px, 0, 0); }
+            30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
+            40%, 60% { transform: translate3d(4px, 0, 0); }
+        }
+
+        /* --- New Panels: Patient History & What Can I Say --- */
+        .side-panel {
+            position: fixed; /* Fixed position relative to viewport */
+            top: 50%;
+            transform: translateY(-50%) translateX(100%); /* Start off-screen to the right */
+            right: 0;
+            width: 350px; /* Width of the panel */
+            height: 80vh;
+            max-height: 700px;
+            background: var(--glass-bg); /* Semi-transparent background */
+            backdrop-filter: blur(20px); /* Strong blur for glass effect */
+            border-radius: 20px 0 0 20px; /* Rounded on the left side */
+            border: 1px solid var(--glass-border);
+            border-right: none; /* No border on the right to blend with edge */
+            box-shadow: var(--glass-shadow), var(--glass-glow); /* Soft shadows and glow */
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); /* Smooth animation */
+            z-index: 100; /* Above chat container */
+            color: var(--text-dark); /* Ensure text is readable */
+        }
+
+        .side-panel.is-active {
+            transform: translateY(-50%) translateX(0); /* Slide in */
+        }
+
+        .side-panel-header {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 600;
+            margin-bottom: 20px;
+            color: var(--primary-blue);
+            text-align: center;
+        }
+
+        .side-panel-content {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding-right: 10px; /* Space for scrollbar */
+            -ms-overflow-style: none; /* IE and Edge */
+            scrollbar-width: none; /* Firefox */
+        }
+        .side-panel-content::-webkit-scrollbar {
+            display: none; /* Chrome, Safari, Opera */
+        }
+
+        .side-panel-content p, .side-panel-content li {
+            margin-bottom: 8px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+            color: var(--text-dark);
+        }
+        .side-panel-content strong {
+            color: var(--primary-blue);
+        }
+        .side-panel-content ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-bottom: 15px;
+        }
+        .side-panel-content .suggestion-item { /* Reuse suggestion item style for "What can I say?" list */
+            background-color: var(--bg-light);
+            padding: 10px 15px;
+            border-radius: 15px;
+            margin-bottom: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            box-shadow: 3px 3px 7px var(--shadow-dark), -3px -3px 7px var(--shadow-light);
+            transition: all 0.2s ease;
+            color: var(--text-dark);
+        }
+        .side-panel-content .suggestion-item:hover {
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            transform: translateY(-2px);
+        }
+
+        .panel-toggle-button {
+            position: fixed;
+            top: 50%;
+            left: 20px; 
+            transform: translateY(-50%);
+            background-color: var(--bg-light);
+            color: var(--primary-blue);
+            width: 55px;
+            height: 55px;
+            border-radius: 50%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            box-shadow: 5px 5px 10px var(--shadow-dark), -5px -5px 10px var(--shadow-light);
+            transition: all 0.2s ease-out;
+            z-index: 101; /* Above panels */
+            border: none;
+            outline: none;
+        }
+        .panel-toggle-button:hover {
+            box-shadow: inset 2px 2px 5px var(--shadow-inner-dark), inset -2px -2px 5px var(--shadow-inner-light);
+            transform: translateY(-50%) scale(0.98);
+        }
+        .panel-toggle-button:active {
+            box-shadow: inset 3px 3px 7px var(--shadow-inner-dark), inset -1px -1px 2px var(--shadow-inner-light);
+            transform: translateY(-50%) scale(0.95);
+        }
+        /* Right-aligned toggle button */
+        .panel-toggle-button.right-aligned {
+            left: auto;
+            right: 20px;
+        }
+
+
+        /* Dynamic Info Card for Bot Responses */
+        .message.bot.info-card {
+            background-color: var(--bg-light);
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 8px 8px 16px var(--shadow-dark), -8px -8px 16px var(--shadow-light);
+            text-align: left;
+            border: 1px solid rgba(0,0,0,0.05);
+            max-width: 90%; /* Wider for info cards */
+            margin-right: auto;
+        }
+        .message.bot.info-card h4 {
+            font-family: 'Poppins', sans-serif;
+            font-size: 1.2rem;
+            color: var(--primary-blue);
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+            padding-bottom: 5px;
+        }
+        .message.bot.info-card p {
+            margin-bottom: 8px;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+        .message.bot.info-card ul {
+            list-style-type: disc;
+            margin-left: 20px;
+            margin-bottom: 10px;
+            font-size: 0.9rem;
+        }
+        .message.bot.info-card strong {
+            color: var(--secondary-blue);
+        }
+        .message.bot.info-card .card-section {
+            margin-bottom: 15px;
+        }
+        .message.bot.info-card .card-section:last-child {
+            margin-bottom: 0;
+        }
+        .message.bot.info-card .card-note {
+            font-style: italic;
+            font-size: 0.8rem;
+            color: #666;
+            margin-top: 10px;
+            border-top: 1px solid rgba(0,0,0,0.05);
+            padding-top: 10px;
+        }
+
+
+        /* Responsive adjustments */
+        @media (max-width: 768px) {
+            body {
+                padding: 0;
+            }
+            .chat-container {
+                height: 100vh;
+                max-height: 100vh;
+                border-radius: 0;
+                box-shadow: none;
+                animation: none;
+            }
+            .chat-header-area {
+                padding: 20px 25px 10px;
+                border-radius: 0;
+                flex-direction: column; /* Stack header elements */
+                align-items: center;
+            }
+            .chat-header-area h1 {
+                font-size: 2rem;
+            }
+            .chat-header-area p {
+                font-size: 0.85rem;
+            }
+            .language-selector-wrapper {
+                margin-top: 15px; /* More space when stacked */
+                padding: 4px;
+                border-radius: 20px;
+            }
+            .language-selector {
+                padding: 6px 15px;
+                font-size: 0.8rem;
+                border-radius: 16px;
+            }
+            .chat-messages {
+                padding: 30px 20px 10px;
+                gap: 10px;
+            }
+            .message {
+                font-size: 0.85rem;
+                padding: 10px 15px;
+                border-radius: 15px;
+            }
+            .message.user, .message.bot {
+                border-bottom-right-radius: 6px;
+                border-bottom-left-radius: 6px;
+            }
+            .chat-input-area {
+                padding: 15px 20px;
+                gap: 8px;
+                border-radius: 0;
+            }
+            .chat-input {
+                padding: 10px 15px;
+                font-size: 0.85rem;
+                border-radius: 20px;
+            }
+            .chat-button {
+                width: 45px;
+                height: 45px;
+            }
+
+            .side-panel {
+                width: 90%; /* Wider on small screens */
+                height: 90vh;
+                max-height: 90vh;
+                border-radius: 15px; /* Rounded on all sides */
+                left: 50%;
+                right: auto;
+                top: 50%;
+                transform: translate(-50%, -50%) scale(0.9); /* Center and scale down when hidden */
+                box-shadow: var(--glass-shadow);
+                border-right: 1px solid var(--glass-border); /* Re-add right border */
+            }
+            .side-panel.is-active {
+                transform: translate(-50%, -50%) scale(1); /* Center and scale up when active */
+            }
+            .panel-toggle-button {
+                left: 10px; /* Reposition for mobile */
+                width: 45px;
+                height: 45px;
+            }
+            .panel-toggle-button.right-aligned {
+                right: 10px; /* Reposition for mobile */
+                left: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header-area">
+            <div class="header-left">
+                <h1>VoiceDoc AI</h1>
+                <p>Your Intelligent Healthcare Assistant</p>
+            </div>
+            <div class="language-selector-wrapper">
+                <select id="language-select" class="language-selector">
+                    <option value="en-IN">English (India)</option>
+                    <option value="hi-IN">Hindi (भारत)</option>
+                    <option value="mr-IN">Marathi (भारत)</option>
+                    <option value="bn-IN">Bengali (ভারত)</option>
+                    <option value="ta-IN">Tamil (இந்தியா)</option>
+                    <option value="te-IN">Telugu (భారతదేశం)</option>
+                    <option value="kn-IN">Kannada (ಭಾರತ)</option>
+                    <option value="ml-IN">Malayalam (ഇന്ത്യ)</option>
+                    <option value="gu-IN">Gujarati (ભારત)</option>
+                    <option value="pa-IN">Punjabi (ਭਾਰਤ)</option>
+                    <option value="or-IN">Odia (ଓଡ଼ିଆ)</option>
+                    <option value="ur-IN">Urdu (بھارت)</option>
+                </select>
+            </div>
+        </div>
+        
+        <div class="chat-messages" id="chat-messages">
+            </div>
+        <div id="voice-status-message"></div>
+        <div class="chat-input-area">
+            <input type="text" id="user-input" class="chat-input" placeholder="Type your symptoms or question...">
+            <button id="send-button" class="chat-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                    <path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" />
+                </svg>
+            </button>
+            <button id="mic-button" class="chat-button mic-button">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                    <path d="M8.25 4.5a3.75 3.75 0 117.5 0v8.25a3.75 3.75 0 11-7.5 0V4.5z" />
+                    <path d="M6 10.5a7.5 7.5 0 007.5 7.5h1.5a.75.75 0 010 1.5H15a9 9 0 01-9-9v-1.5z" />
+                    <path d="M17.25 10.5a.75.75 0 01.75.75v.75a6 6 0 01-12 0v-.75a.75.75 0 011.5 0v.75a4.5 4.5 0 009 0v-.75a.75.75 0 01.75-.75z" />
+                </svg>
+            </button>
+        </div>
+    </div>
+
+    <div id="patient-history-panel" class="side-panel">
+        <h2 class="side-panel-header">Your Patient Profile</h2>
+        <div class="side-panel-content" id="patient-history-content">
+            </div>
+    </div>
+
+    <div id="suggestions-panel" class="side-panel right-aligned">
+        <h2 class="side-panel-header">What Can I Ask?</h2>
+        <div class="side-panel-content">
+            <p class="mb-4 text-center opacity-80">Try these common queries or keywords:</p>
+            <div class="suggestion-list">
+                <div class="suggestion-item">What are common cold symptoms?</div>
+                <div class="suggestion-item">How to manage fever at home?</div>
+                <div class="suggestion-item">I have a headache and feel nauseous.</div>
+                <div class="suggestion-item">Tell me about **diabetes**.</div>
+                <div class="suggestion-item">When should I see a doctor for cough?</div>
+                <div class="suggestion-item">What are the benefits of exercise?</div>
+                <div class="suggestion-item">Explain **hypertension**.</div>
+                <div class="suggestion-item">I have skin rash and itching.</div>
+                <div class="suggestion-item">How to relieve a sore throat?</div>
+                <div class="suggestion-item">What helps with stress?</div>
+                <div class="suggestion-item">Tell me about **dandruff**.</div>
+                <div class="suggestion-item">I'm experiencing diarrhea.</div>
+                <div class="suggestion-item">How to get better sleep?</div>
+                <div class="suggestion-item">Save Paracetamol for fever.</div>
+                <div class="suggestion-item">My name is [Your Name].</div>
+                <div class="suggestion-item">My age is [Your Age].</div>
+            </div>
+        </div>
+    </div>
+
+
+    <button id="toggle-history-panel" class="panel-toggle-button">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+            <path fill-rule="evenodd" d="M7.5 6a4.5 4.5 0 119 0 4.5 4.5 0 01-9 0zM3.751 20.105a8.25 8.25 0 0116.498 0 .75.75 0 01-.437.695A18.683 18.683 0 0112 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 01-.437-.695z" clip-rule="evenodd" />
+        </svg>
+    </button>
+
+    <button id="toggle-suggestions-panel" class="panel-toggle-button right-aligned">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-6 h-6">
+            <path fill-rule="evenodd" d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z" clip-rule="evenodd" />
+        </svg>
+    </button>
+
+
+    <script>
+        const chatMessages = document.getElementById('chat-messages');
+        const userInput = document.getElementById('user-input');
+        const sendButton = document.getElementById('send-button');
+        const micButton = document.getElementById('mic-button');
+        const voiceStatusMessage = document.getElementById('voice-status-message');
+        const languageSelect = document.getElementById('language-select');
+        const patientHistoryPanel = document.getElementById('patient-history-panel');
+        const toggleHistoryPanelButton = document.getElementById('toggle-history-panel');
+        const suggestionsPanel = document.getElementById('suggestions-panel'); // Renamed from suggestions-overlay
+        const toggleSuggestionsPanelButton = document.getElementById('toggle-suggestions-panel'); // Renamed
+        const suggestionItems = document.querySelectorAll('#suggestions-panel .suggestion-item'); // Updated selector
+        let recognition; // Web Speech API for Speech-to-Text
+        let speechSynthesisUtterance; // Web Speech API for Text-to-Speech
+        let isSpeaking = false; // Track if bot is currently speaking
+        let currentUtterance = null; // Store the currently speaking utterance to control it
+
+        // Patient Data Structure (persisted in localStorage)
+        let patientData = {
+            name: "N/A",
+            age: "N/A",
+            gender: "N/A",
+            medicalConditions: [],
+            currentMedications: [],
+            savedCures: [], // New array for saved medications/cures
+            pastConsultations: [] // For storing snippets of past interactions
+        };
+
+        // --- localStorage Functions ---
+        function savePatientData() {
+            try {
+                localStorage.setItem('voiceDocPatientData', JSON.stringify(patientData));
+                console.log('Patient data saved to localStorage:', patientData);
+                renderPatientHistory(); // Re-render history after saving
+            } catch (e) {
+                console.error("Error saving to localStorage:", e);
+                setVoiceStatus("Could not save data to your browser's local storage.", 'error');
+            }
+        }
+
+        function loadPatientData() {
+            try {
+                const storedData = localStorage.getItem('voiceDocPatientData');
+                if (storedData) {
+                    const parsedData = JSON.parse(storedData);
+                    // Merge stored data with default, ensuring new properties are included
+                    patientData = { 
+                        ...patientData, 
+                        ...parsedData,
+                        // Ensure arrays are initialized if they were null/undefined in old stored data
+                        medicalConditions: parsedData.medicalConditions || [],
+                        currentMedications: parsedData.currentMedications || [],
+                        savedCures: parsedData.savedCures || [],
+                        pastConsultations: parsedData.pastConsultations || []
+                    };
+                    console.log('Patient data loaded from localStorage:', patientData);
+                } else {
+                    console.log('No patient data found in localStorage. Starting fresh.');
+                }
+                renderPatientHistory(); // Render history on load
+            } catch (e) {
+                console.error("Error loading from localStorage:", e);
+                setVoiceStatus("Could not load previous data from your browser's local storage. Starting fresh.", 'error');
+            }
+        }
+
+        function renderPatientHistory() {
+            const patientHistoryContent = document.getElementById('patient-history-content');
+            
+            // Clear existing content and rebuild
+            patientHistoryContent.innerHTML = `
+                <p><strong>Name:</strong> ${patientData.name}</p>
+                <p><strong>Age:</strong> ${patientData.age}</p>
+                <p><strong>Gender:</strong> ${patientData.gender}</p>
+                <p><strong>Medical Conditions:</strong> ${patientData.medicalConditions.length > 0 ? patientData.medicalConditions.join(', ') : 'None recorded.'}</p>
+                <p><strong>Current Medications:</strong> ${patientData.currentMedications.length > 0 ? patientData.currentMedications.join(', ') : 'None recorded.'}</p>
+                <h3 class="side-panel-header" style="font-size: 1.2rem; margin-top: 20px;">Saved Medications & Cures</h3>
+                <ul id="saved-cures-list"></ul>
+                <h3 class="side-panel-header" style="font-size: 1.2rem; margin-top: 20px;">Past Consultations</h3>
+                <ul id="past-consultations-list"></ul>
+            `;
+            const currentSavedCuresList = patientHistoryContent.querySelector('#saved-cures-list');
+            const currentPastConsultationsList = patientHistoryContent.querySelector('#past-consultations-list');
+
+            if (patientData.savedCures && patientData.savedCures.length > 0) {
+                patientData.savedCures.forEach(cure => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `• <strong>${cure.name}</strong> (for ${cure.condition || 'unknown condition'}) - ${cure.date}`;
+                    currentSavedCuresList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = "No medications or cures saved yet.";
+                currentSavedCuresList.appendChild(li);
+            }
+
+            if (patientData.pastConsultations && patientData.pastConsultations.length > 0) {
+                // Display in reverse chronological order
+                [...patientData.pastConsultations].reverse().forEach(consult => {
+                    const li = document.createElement('li');
+                    li.innerHTML = `• <strong>${consult.date}:</strong> ${consult.summary}`;
+                    currentPastConsultationsList.appendChild(li);
+                });
+            } else {
+                const li = document.createElement('li');
+                li.textContent = "No past consultations recorded.";
+                currentPastConsultationsList.appendChild(li);
+            }
+        }
+
+
+        // Function to display temporary status messages (for voice input)
+        function setVoiceStatus(message, type = 'info') {
+            voiceStatusMessage.textContent = message;
+            voiceStatusMessage.className = ''; // Reset classes
+            if (type === 'error') {
+                voiceStatusMessage.classList.add('text-red-600'); 
+            } else if (type === 'success') {
+                voiceStatusMessage.classList.add('text-green-500'); 
+            } else {
+                voiceStatusMessage.classList.add('text-gray-600'); 
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function clearVoiceStatus() {
+            voiceStatusMessage.textContent = '';
+            voiceStatusMessage.className = '';
+        }
+
+        // Initialize Web Speech API (cross-browser compatibility)
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        
+        if (SpeechRecognition) {
+            recognition = new SpeechRecognition();
+            recognition.continuous = false; // Only get one result per speech
+            recognition.interimResults = false; // Only return final results
+            recognition.maxAlternatives = 1; // Get only the most likely transcription
+            
+            // Set initial language from dropdown
+            recognition.lang = languageSelect.value; 
+
+            // Event listener for language change
+            languageSelect.addEventListener('change', () => {
+                recognition.lang = languageSelect.value;
+                setVoiceStatus(`Voice input language set to: ${languageSelect.options[languageSelect.selectedIndex].text}`, 'info');
+                console.log(`Speech recognition language changed to: ${recognition.lang}`);
+            });
+
+
+            // Event handler for when recognition starts
+            recognition.onstart = () => {
+                micButton.classList.add('active');
+                setVoiceStatus(`Listening in ${languageSelect.options[languageSelect.selectedIndex].text}... Speak now.`, 'info');
+                userInput.disabled = true;
+                sendButton.disabled = true;
+                languageSelect.disabled = true; // Disable language select while listening
+            };
+
+            // Event handler for when a speech recognition result is available
+            recognition.onresult = (event) => {
+                const transcript = event.results[0][0].transcript;
+                clearVoiceStatus(); // Clear "Listening..." message
+                addMessage('user', `🎤 (Voice Input): ${transcript}`);
+                sendSymptomsToBackend(transcript);
+            };
+
+            // Event handler for speech recognition errors
+            recognition.onerror = (event) => {
+                console.error('Speech recognition error:', event.error);
+                micButton.classList.remove('active');
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                languageSelect.disabled = false; // Enable language select on error
+                removeTypingIndicator(); // Ensure typing indicator is removed on error
+
+                let errorMessage = `Voice input error: ${event.error}.`;
+                if (event.error === 'not-allowed') {
+                    errorMessage = `Microphone access denied! Please allow microphone access for this site in your browser settings.`;
+                } else if (event.error === 'no-speech') {
+                    errorMessage = `No speech detected. Please ensure your microphone is working and speak clearly.`;
+                } else if (event.error === 'network') {
+                    errorMessage = `Network error. Please check your internet connection.`;
+                } else if (event.error === 'aborted') {
+                    errorMessage = `Voice input was cancelled.`;
+                }
+                setVoiceStatus(errorMessage, 'error');
+                addMessage('bot', `I couldn't process your voice input. You can type your symptoms instead.`, 'error-message');
+            };
+
+            // Event handler for when recognition ends
+            recognition.onend = () => {
+                micButton.classList.remove('active');
+                userInput.disabled = false;
+                sendButton.disabled = false;
+                languageSelect.disabled = false; // Enable language select when listening ends
+                // Only clear status if not an error message
+                if (!voiceStatusMessage.classList.contains('text-red-600')) {
+                    clearVoiceStatus();
+                }
+                removeTypingIndicator(); // Ensure typing indicator is removed when listening ends
+            };
+
+            // Event listener for the microphone button click
+            micButton.addEventListener('click', () => {
+                try {
+                    // Cancel any ongoing bot speech when user starts mic
+                    if (window.speechSynthesis.speaking) {
+                        window.speechSynthesis.cancel();
+                        if (currentUtterance && currentUtterance.speakerIcon) {
+                            currentUtterance.speakerIcon.classList.remove('speaking');
+                            currentUtterance.speakerIcon.title = "Click to play speech";
+                        }
+                    }
+
+                    // Check if recognition is already active to prevent multiple starts
+                    if (micButton.classList.contains('active')) {
+                        recognition.stop(); // Stop if already listening
+                        clearVoiceStatus();
+                        return;
+                    }
+                    recognition.start();
+                } catch (e) {
+                    console.error('Recognition start error:', e);
+                    setVoiceStatus('Could not start voice recognition. Check console for details.', 'error');
+                    addMessage('bot', 'Could not start voice recognition. Please ensure microphone access is granted and try again.', 'error-message');
+                    micButton.classList.remove('active');
+                    userInput.disabled = false;
+                    sendButton.disabled = false;
+                    languageSelect.disabled = false; // Enable language select on error
+                    removeTypingIndicator();
+                }
+            });
+        } else {
+            // If Web Speech API is not supported by the browser
+            micButton.style.display = 'none'; // Hide mic button
+            setVoiceStatus('Your browser does not fully support Web Speech API for voice input. Please use text input.', 'error');
+            addMessage('bot', 'Your browser does not fully support Web Speech API for voice input. Please use text input.', 'error-message');
+            languageSelect.disabled = true; // Disable language select if voice not supported
+        }
+
+        // Function to add messages to the chat display
+        function addMessage(role, content, type = '') {
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', role);
+            if (type) messageDiv.classList.add(type); // Add specific type class if provided
+
+            if (typeof content === 'string') {
+                // Convert Markdown-like bold and italics to HTML for string content
+                let formattedText = content.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'); // **bold**
+                formattedText = formattedText.replace(/\*(.*?)\*/g, '<em>$1</em>');     // *italic*
+                messageDiv.innerHTML = formattedText.replace(/\n/g, '<br>'); // Preserve newlines
+            } else if (typeof content === 'object' && content.type === 'card') {
+                // Handle dynamic info card
+                messageDiv.classList.add('info-card');
+                let cardHtml = `<h4>${content.title}</h4>`;
+                if (content.sections) {
+                    content.sections.forEach(section => {
+                        cardHtml += `<div class="card-section">`;
+                        if (section.heading) {
+                            cardHtml += `<strong>${section.heading}:</strong> `;
+                        }
+                        if (section.text) {
+                            cardHtml += `<p>${section.text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, '<br>')}</p>`;
+                        }
+                        if (section.list && section.list.length > 0) {
+                            cardHtml += `<ul>`;
+                            section.list.forEach(item => {
+                                cardHtml += `<li>${item.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')}</li>`;
+                            });
+                            cardHtml += `</ul>`;
+                        }
+                        cardHtml += `</div>`;
+                    });
+                }
+                if (content.note) {
+                    cardHtml += `<p class="card-note">${content.note}</p>`;
+                }
+                messageDiv.innerHTML = cardHtml;
+            }
+
+
+            // Add speaker icon for bot messages (only for text messages, not cards/prompts)
+            if (role === 'bot' && !type.includes('typing-indicator') && !type.includes('error-message') && !type.includes('save-prompt') && !type.includes('patient-info-prompt') && typeof content === 'string') {
+                const speakerIcon = document.createElement('span');
+                speakerIcon.classList.add('speaker-icon');
+                // SVG for speaker icon
+                speakerIcon.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5">
+                        <path fill-rule="evenodd" d="M9.375 7.5a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3a.75.75 0 01.75-.75zM11.25 4.5a.75.75 0 01.75.75v7.5a.75.75 0 01-1.5 0V5.25a.75.75 0 01.75-.75zM13.125 10.5a.75.75 0 01.75.75v3a.75.75 0 01-1.5 0v-3a.75.75 0 01.75-.75z" clip-rule="evenodd" />
+                        <path d="M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 8.25a.75.75 0 00-1.5 0v3a.75.75 0 001.5 0v-3zM15.75 9a.75.75 0 00-1.5 0v3a.75.75 0 001.5 0V9z" />
+                    </svg>
+                `;
+                speakerIcon.title = "Click to toggle speech";
+                speakerIcon.addEventListener('click', () => toggleSpeech(content, speakerIcon));
+                messageDiv.appendChild(speakerIcon);
+            }
+
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        // --- Text-to-Speech (TTS) Functions ---
+        function speakBotResponse(textToSpeak, speakerIconElement = null) {
+            if ('speechSynthesis' in window) {
+                // Stop any ongoing speech and reset previous icon
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                    if (currentUtterance && currentUtterance.speakerIcon) {
+                        currentUtterance.speakerIcon.classList.remove('speaking');
+                        currentUtterance.speakerIcon.title = "Click to play speech";
+                    }
+                }
+
+                speechSynthesisUtterance = new SpeechSynthesisUtterance(textToSpeak);
+                // Set TTS language based on selected input language for better consistency
+                speechSynthesisUtterance.lang = languageSelect.value;
+
+                speechSynthesisUtterance.onstart = () => {
+                    isSpeaking = true;
+                    if (speakerIconElement) {
+                        speakerIconElement.classList.add('speaking');
+                        speakerIconElement.title = "Click to pause speech";
+                    }
+                };
+                speechSynthesisUtterance.onend = () => {
+                    isSpeaking = false;
+                    if (speakerIconElement) {
+                        speakerIconElement.classList.remove('speaking');
+                        speakerIconElement.title = "Click to play speech";
+                    }
+                    currentUtterance = null;
+                };
+                speechSynthesisUtterance.onerror = (event) => {
+                    console.error('SpeechSynthesisUtterance.onerror', event);
+                    isSpeaking = false;
+                    if (speakerIconElement) {
+                        speakerIconElement.classList.remove('speaking');
+                        speakerIconElement.title = "Speech error. Click to retry.";
+                    }
+                    currentUtterance = null;
+                };
+                
+                currentUtterance = { utterance: speechSynthesisUtterance, speakerIcon: speakerIconElement };
+                window.speechSynthesis.speak(speechSynthesisUtterance);
+            } else {
+                console.warn('Text-to-Speech not supported in this browser.');
+            }
+        }
+
+        function toggleSpeech(textToSpeak, speakerIconElement) {
+            if ('speechSynthesis' in window) {
+                if (currentUtterance && currentUtterance.utterance === speechSynthesisUtterance && window.speechSynthesis.speaking) {
+                    // If the currently playing utterance is this one, toggle pause/resume
+                    if (window.speechSynthesis.paused) {
+                        window.speechSynthesis.resume();
+                        speakerIconElement.title = "Click to resume speech";
+                        speakerIconElement.classList.add('speaking');
+                    } else {
+                        window.speechSynthesis.pause();
+                        speakerIconElement.title = "Click to resume speech";
+                        speakerIconElement.classList.remove('speaking');
+                    }
+                } else {
+                    // If a different message is speaking or nothing is speaking, play this one
+                    speakBotResponse(textToSpeak, speakerIconElement);
+                }
+            }
+        }
+
+        // --- Typing indicator management ---
+        function showTypingIndicator() {
+            if (!chatMessages.querySelector('.typing-indicator')) {
+                const typingDiv = document.createElement('div');
+                typingDiv.classList.add('message', 'bot', 'typing-indicator');
+                typingDiv.innerHTML = `<span></span><span></span><span></span>`;
+                chatMessages.appendChild(typingDiv);
+            }
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function removeTypingIndicator() {
+            const typingIndicator = chatMessages.querySelector('.typing-indicator');
+            if (typingIndicator) {
+                typingIndicator.remove();
+            }
+        }
+
+        // --- Backend Communication Simulation (The "Intelligence" for Hackathon) ---
+        async function sendSymptomsToBackend(symptomText) {
+            showTypingIndicator();
+            const lowerCaseSymptom = symptomText.toLowerCase();
+
+            try {
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Simulate API call delay
+
+                let response_content; // Can be string or card object
+                let medication_info = null; // For saving cures
+                let is_general_advice = false;
+
+                // --- Patient Profile Updates ---
+                if (lowerCaseSymptom.includes("my name is")) {
+                    const nameMatch = lowerCaseSymptom.match(/my name is (.+)/);
+                    if (nameMatch && nameMatch[1]) {
+                        patientData.name = nameMatch[1].replace(/\./g, '').trim().split(' ').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ');
+                        savePatientData();
+                        response_content = `Hello **${patientData.name}**! It's good to know your name. How can I help you today?`;
+                    }
+                } else if (lowerCaseSymptom.includes("my age is") || lowerCaseSymptom.includes("i am") && lowerCaseSymptom.includes("years old")) {
+                    const ageMatch = lowerCaseSymptom.match(/(\d+)\s*years? old|my age is (\d+)/);
+                    if (ageMatch && (ageMatch[1] || ageMatch[2])) {
+                        patientData.age = ageMatch[1] || ageMatch[2];
+                        savePatientData();
+                        response_content = `Understood. So, you are **${patientData.age}** years old. This information can help me provide more relevant general advice.`;
+                    }
+                } else if (lowerCaseSymptom.includes("i am a") && (lowerCaseSymptom.includes("male") || lowerCaseSymptom.includes("female"))) {
+                    if (lowerCaseSymptom.includes("male")) {
+                        patientData.gender = "Male";
+                    } else if (lowerCaseSymptom.includes("female")) {
+                        patientData.gender = "Female";
+                    }
+                    savePatientData();
+                    response_content = `Okay, I've noted your gender as **${patientData.gender}**.`;
+                }
+
+                // --- Specific Health Query Responses (More detailed and card-like) ---
+                if (!response_content) { // Only proceed if not handled by patient profile update
+                    if (lowerCaseSymptom.includes("common cold") || lowerCaseSymptom.includes("cold symptoms") || (lowerCaseSymptom.includes("runny nose") && lowerCaseSymptom.includes("sore throat"))) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Common Cold Information',
+                            sections: [
+                                { heading: 'Symptoms', list: ['Runny or stuffy nose', 'Sore throat', 'Cough', 'Congestion', 'Slight body aches or mild headache', 'Sneezing', 'Low-grade fever (sometimes)'] },
+                                { heading: 'Home Care', text: 'Rest, drink plenty of fluids, use saline nasal sprays, and consider over-the-counter remedies like decongestants or pain relievers (e.g., **Paracetamol**). Honey can soothe a cough.' },
+                                { heading: 'When to See a Doctor', text: 'If symptoms worsen, last more than 10 days, or include high fever, severe headache, shortness of breath, or persistent vomiting. Young children, elderly, or those with underlying conditions should seek earlier medical advice.' }
+                            ],
+                            note: 'This information is for general guidance only. Consult a doctor for personalized medical advice.'
+                        };
+                        medication_info = { name: "Paracetamol / Decongestants", type: "symptom relief", condition: "Common Cold" };
+
+                    } else if (lowerCaseSymptom.includes("fever")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Fever Management',
+                            sections: [
+                                { heading: 'What to Do', text: 'Rest and stay hydrated. Drink plenty of water, clear broths, or oral rehydration solutions. Take **Paracetamol (Acetaminophen)** or **Ibuprofen** to help lower your temperature and relieve discomfort. Do not take antibiotics unless prescribed by a doctor for a bacterial infection.' },
+                                { heading: 'When to Seek Medical Attention', text: 'Consult a doctor if your fever is above **103°F (39.4°C)**, lasts more than 3 days, is accompanied by severe headache, stiff neck, rash, difficulty breathing, or confusion. For infants under 3 months with any fever, seek immediate medical attention.' }
+                            ],
+                            note: 'This is not a substitute for professional medical advice.'
+                        };
+                        medication_info = { name: "Paracetamol / Ibuprofen", type: "fever reducer", condition: "Fever" };
+
+                    } else if (lowerCaseSymptom.includes("headache")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Headache Relief',
+                            sections: [
+                                { heading: 'Common Causes', list: ['Stress', 'Dehydration', 'Lack of sleep', 'Eyestrain', 'Caffeine withdrawal', 'Sinus issues'] },
+                                { heading: 'Relief Measures', text: 'Rest in a quiet, dark room. Apply a cool compress to your forehead. Drink water. Over-the-counter pain relievers like **Ibuprofen** or **Paracetamol** can be effective.' },
+                                { heading: 'When to Worry', text: 'Seek immediate medical attention for sudden, severe headache (worst headache of your life), headache accompanied by stiff neck, fever, vision changes, weakness, numbness, or if it follows a head injury.' }
+                            ],
+                            note: 'Always consult a doctor for chronic or severe headaches.'
+                        };
+                        medication_info = { name: "Ibuprofen / Paracetamol", type: "pain reliever", condition: "Headache" };
+
+                    } else if (lowerCaseSymptom.includes("cough")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Cough Advice',
+                            sections: [
+                                { heading: 'Types & Causes', text: 'A cough can be dry (irritating) or productive (with phlegm). Common causes include colds, flu, allergies, asthma, or acid reflux.' },
+                                { heading: 'Remedies', text: 'For dry cough, **honey and lemon** can be soothing. For productive cough, stay hydrated to thin mucus. Over-the-counter cough suppressants (for dry cough) or expectorants (for productive cough) might help. Avoid irritants like smoke.' },
+                                { heading: 'Red Flags', text: 'Consult a doctor if your cough is persistent (more than 3 weeks), severe, produces colored or bloody phlegm, or is accompanied by shortness of breath, chest pain, fever, or weight loss.' }
+                            ],
+                            note: 'Persistent cough warrants medical evaluation.'
+                        };
+                        medication_info = { name: "Honey & Lemon / Cough Syrup", type: "cough relief", condition: "Cough" };
+                    }
+                    else if (lowerCaseSymptom.includes("sore throat")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Sore Throat Relief',
+                            sections: [
+                                { heading: 'Home Remedies', list: ['Warm salt water gargles', 'Lozenges or hard candies', 'Honey in warm water or tea', 'Plenty of fluids', 'Rest'] },
+                                { heading: 'When to See a Doctor', text: 'If your sore throat is severe, lasts more than a few days, is accompanied by high fever, difficulty swallowing, swollen tonsils with white patches, or a rash (especially in children, may indicate strep throat).' }
+                            ],
+                            note: 'Strep throat requires antibiotic treatment.'
+                        };
+                        medication_info = { name: "Lozenges / Salt Water", type: "throat soothing", condition: "Sore Throat" };
+                    }
+                    else if (lowerCaseSymptom.includes("diabetes")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Understanding Diabetes',
+                            sections: [
+                                { heading: 'What is it?', text: '**Diabetes mellitus** is a chronic condition that affects how your body converts food into energy. Your body either doesn\'t make enough insulin or can\'t effectively use the insulin it does make.' },
+                                { heading: 'Types', list: ['**Type 1 Diabetes:** Autoimmune condition where the body does not produce insulin.', '**Type 2 Diabetes:** The body either doesn\'t produce enough insulin or resists insulin. More common.', '**Gestational Diabetes:** Develops during pregnancy.'] },
+                                { heading: 'Management', text: 'Involves lifestyle changes (balanced diet, regular exercise), regular blood sugar monitoring, and often medication (like **Metformin**) or insulin therapy. Regular consultations with an endocrinologist are crucial.' }
+                            ],
+                            note: 'Early diagnosis and management are vital to prevent complications.'
+                        };
+                        medication_info = { name: "Metformin / Insulin", type: "blood sugar control", condition: "Diabetes" };
+                    }
+                    else if (lowerCaseSymptom.includes("hypertension") || lowerCaseSymptom.includes("high blood pressure")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Understanding Hypertension (High Blood Pressure)',
+                            sections: [
+                                { heading: 'What is it?', text: '**Hypertension** is a common condition where the long-term force of the blood against your artery walls is high enough that it may eventually cause health problems, such as heart disease. Often called a "silent killer" as it usually has no symptoms.' },
+                                { heading: 'Management', text: 'Includes lifestyle modifications (DASH diet, regular exercise, limiting sodium, maintaining healthy weight, stress management) and sometimes medication such as **Lisinopril** or **Amlodipine**. Regular monitoring is key.' },
+                                { heading: 'Risks', text: 'Untreated high blood pressure increases your risk of heart attack, stroke, kidney disease, and vision problems.' }
+                            ],
+                            note: 'Regular check-ups and adherence to treatment are crucial for managing hypertension.'
+                        };
+                        medication_info = { name: "Lisinopril / Amlodipine", type: "blood pressure medication", condition: "Hypertension" };
+                    }
+                    else if (lowerCaseSymptom.includes("skin rash") || lowerCaseSymptom.includes("itching")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Skin Rash & Itching',
+                            sections: [
+                                { heading: 'Common Causes', list: ['Allergies (contact dermatitis)', 'Eczema', 'Psoriasis', 'Fungal infections (e.g., ringworm)', 'Insect bites', 'Viral infections (e.g., chickenpox)'] },
+                                { heading: 'Home Care', text: 'Keep the affected area clean and dry. Avoid scratching. A cool compress can soothe itching. Over-the-counter **hydrocortisone cream** (1%) can help reduce inflammation and itching for mild cases. Use gentle, fragrance-free soaps.' },
+                                { heading: 'When to Consult a Doctor', text: 'If the rash is widespread, painful, blistering, spreading rapidly, accompanied by fever, or shows signs of infection (pus, increasing redness, warmth).' }
+                            ],
+                            note: 'A dermatologist can provide an accurate diagnosis and treatment plan.'
+                        };
+                        medication_info = { name: "Hydrocortisone Cream (mild)", type: "anti-itch", condition: "Skin Rash" };
+                    }
+                     else if (lowerCaseSymptom.includes("dandruff")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Dandruff Management',
+                            sections: [
+                                { heading: 'What is it?', text: 'Dandruff is a common scalp condition that causes flaky skin. It\'s often a mild form of seborrheic dermatitis, possibly linked to a yeast-like fungus (Malassezia).' },
+                                { heading: 'Treatment', text: 'Use an **anti-dandruff shampoo** containing ingredients like **zinc pyrithione**, **selenium sulfide**, or **ketoconazole**. Lather, leave on for 5-10 minutes, then rinse thoroughly. Use regularly initially, then as needed.' },
+                                { heading: 'Tips', list: ['Shampoo regularly (but not excessively, which can dry scalp)', 'Avoid harsh hair products', 'Reduce stress'] },
+                                { heading: 'When to See a Dermatologist', text: 'If over-the-counter shampoos don\'t help after several weeks, or if your scalp becomes very red, swollen, or itchy.' }
+                            ],
+                            note: 'A dermatologist can provide stronger prescription options if needed.'
+                        };
+                        medication_info = { name: "Anti-dandruff shampoo", type: "scalp treatment", condition: "Dandruff" };
+                    }
+                    else if (lowerCaseSymptom.includes("stress") || lowerCaseSymptom.includes("anxiety")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Managing Stress and Anxiety',
+                            sections: [
+                                { heading: 'Self-Care Tips', list: ['Practice deep breathing exercises', 'Engage in regular physical activity', 'Ensure adequate sleep', 'Maintain a balanced diet', 'Limit caffeine and alcohol', 'Spend time in nature', 'Connect with supportive friends and family'] },
+                                { heading: 'When to Seek Professional Help', text: 'If stress or anxiety is constant, overwhelming, interferes with daily life, or is accompanied by symptoms like panic attacks, excessive worry, or persistent sadness, consider speaking with a mental health professional (therapist, counselor) or your doctor.' }
+                            ],
+                            note: 'Mental health is as important as physical health. Don\'t hesitate to seek support.'
+                        };
+                        medication_info = { name: "Mindfulness/Exercise", type: "stress management", condition: "Stress/Anxiety" }; 
+                    }
+                    else if (lowerCaseSymptom.includes("sleep problem") || lowerCaseSymptom.includes("insomnia")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Improving Sleep Hygiene',
+                            sections: [
+                                { heading: 'Tips for Better Sleep', list: ['Maintain a consistent sleep schedule (even on weekends)', 'Create a relaxing bedtime routine', 'Ensure your bedroom is dark, quiet, and cool', 'Avoid caffeine and heavy meals close to bedtime', 'Limit daytime naps to 20-30 minutes', 'Get regular exercise (but not too close to bedtime)'] },
+                                { heading: 'When to Consult a Doctor', text: 'If insomnia persists despite trying self-help methods, or if you experience excessive daytime sleepiness, loud snoring, or other concerning symptoms. A sleep specialist can diagnose and treat underlying sleep disorders.' }
+                            ],
+                            note: 'Chronic sleep deprivation can impact your overall health significantly.'
+                        };
+                        medication_info = { name: "Good Sleep Hygiene", type: "lifestyle change", condition: "Insomnia" };
+                    }
+                    else if (lowerCaseSymptom.includes("diarrhea")) {
+                        response_content = {
+                            type: 'card',
+                            title: 'Managing Diarrhea',
+                            sections: [
+                                { heading: 'Key Actions', text: 'The most important thing is to prevent dehydration. Drink plenty of fluids: water, clear broths, or **Oral Rehydration Solutions (ORS)**. Slowly reintroduce bland foods like bananas, rice, applesauce, and toast (**BRAT diet**).' },
+                                { heading: 'Foods to Avoid', list: ['Dairy products', 'Fatty, greasy, or fried foods', 'Spicy foods', 'Foods high in fiber (temporarily)', 'Caffeine and alcohol'] },
+                                { heading: 'When to Seek Medical Help', text: 'If diarrhea is severe, bloody, black and tarry, lasts more than 2 days (for adults) or 24 hours (for children), or is accompanied by high fever, severe abdominal pain, or signs of dehydration (e.g., dizziness, reduced urination).' }
+                            ],
+                            note: 'Always consult a doctor if symptoms are severe or persistent.'
+                        };
+                        medication_info = { name: "Oral Rehydration Salts (ORS)", type: "hydration", condition: "Diarrhea" };
+                    }
+                    else if (lowerCaseSymptom.includes("save cure") || lowerCaseSymptom.includes("save medication")) {
+                        response_content = "Please tell me the name of the medication or cure you'd like to save, and optionally, for what condition (e.g., 'Save Paracetamol for fever').";
+                    }
+                    else if (lowerCaseSymptom.includes("save")) {
+                        const match = lowerCaseSymptom.match(/save (.+?)( for (.+))?$/);
+                        if (match) {
+                            const name = match[1].trim();
+                            const condition = match[3] ? match[3].trim() : 'general wellness';
+                            const today = new Date().toISOString().slice(0, 10);
+                            patientData.savedCures.push({ name: name.charAt(0).toUpperCase() + name.slice(1), date: today, condition: condition.charAt(0).toUpperCase() + condition.slice(1) });
+                            savePatientData();
+                            response_content = `Okay, I've saved **${name}** (for ${condition}) to your patient history. You can view it in the Patient Profile panel.`;
+                        } else {
+                            response_content = "I'm not sure what you'd like to save. Please tell me the medication/cure and condition, e.g., 'Save Paracetamol for headache'.";
+                        }
+                    }
+                    else if (lowerCaseSymptom.includes("help") || lowerCaseSymptom.includes("what can i ask")) {
+                        response_content = "I can provide general information on common health concerns, suggest home remedies, and track basic patient history. Try asking about symptoms like 'fever', 'cough', 'headache', or conditions like 'diabetes', 'hypertension'. You can also ask me to 'save medication X for Y condition'.";
+                    } else if (lowerCaseSymptom.includes("what is my name") || lowerCaseSymptom.includes("my name")) {
+                        response_content = `Your name is currently recorded as **${patientData.name}**. If this is incorrect or you'd like to update it, just say 'My name is [New Name]'.`;
+                    } else if (lowerCaseSymptom.includes("what is my age") || lowerCaseSymptom.includes("my age")) {
+                        response_content = `Your age is currently recorded as **${patientData.age}**. If you'd like to update it, just say 'My age is [New Age]'.`;
+                    }
+                    else {
+                        // Default fallback if no specific symptom is matched
+                        is_general_advice = true;
+                        response_content = `I am an AI assistant and cannot provide medical diagnoses or treatment. My purpose is to offer general health information. For any health concerns, please consult a qualified healthcare professional. If this is an emergency, please seek immediate medical attention. Could you tell me more about what you're experiencing?`;
+                    }
+                }
+                
+                removeTypingIndicator();
+                
+                addMessage('bot', response_content);
+                // Ensure to pass the actual text for TTS, even if content is a card object
+                const ttsText = typeof response_content === 'string' ? response_content : 
+                                response_content.type === 'card' ? `Here is some information on ${response_content.title}. ${response_content.sections.map(s => s.text || (s.list ? s.list.join(', ') : '')).join('. ')}` : 
+                                "I'm sorry, I cannot process that request.";
+
+                const lastBotMessage = chatMessages.lastChild;
+                const speakerIcon = lastBotMessage ? lastBotMessage.querySelector('.speaker-icon') : null;
+                speakBotResponse(ttsText, speakerIcon);
+
+                // If not a specific save command, add to past consultations
+                if (!lowerCaseSymptom.includes("save ")) {
+                    const today = new Date().toISOString().slice(0, 10);
+                    // Summarize the response for history: if card, use title; else, use string
+                    const historySummary = typeof response_content === 'string' ? response_content.substring(0, Math.min(response_content.length, 100)) + (response_content.length > 100 ? "..." : "") :
+                                           response_content.type === 'card' ? `Information on ${response_content.title}` :
+                                           "Bot responded.";
+                    
+                    patientData.pastConsultations.push({
+                        date: today,
+                        summary: `User asked about "${symptomText.substring(0, Math.min(symptomText.length, 70))}..." and bot provided: "${historySummary}"`
+                    });
+                    savePatientData(); // Save overall history after each interaction
+                }
+
+                // If medication info is available, prompt to save
+                if (medication_info && !lowerCaseSymptom.includes("save ")) { // Don't prompt if the user explicitly said 'save'
+                    setTimeout(() => {
+                        const savePromptMessage = document.createElement('div');
+                        savePromptMessage.classList.add('message', 'bot', 'save-prompt');
+                        savePromptMessage.innerHTML = `
+                            Would you like me to save "**${medication_info.name}**" to your patient history for future reference?
+                            <div class="prompt-buttons">
+                                <button class="save-yes">Yes</button>
+                                <button class="save-no">No</button>
+                            </div>
+                        `;
+                        chatMessages.appendChild(savePromptMessage);
+                        chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                        const saveYesButton = savePromptMessage.querySelector('.save-yes');
+                        const saveNoButton = savePromptMessage.querySelector('.save-no');
+
+                        saveYesButton.addEventListener('click', () => {
+                            const today = new Date().toISOString().slice(0, 10);
+                            patientData.savedCures.push({ 
+                                name: medication_info.name, 
+                                date: today,
+                                condition: medication_info.condition || symptomText // Use specific condition if available, else general symptom
+                            });
+                            savePatientData();
+                            savePromptMessage.remove(); // Remove prompt after action
+                            addMessage('bot', `Okay, I've saved **${medication_info.name}** to your patient history.`);
+                            speakBotResponse(`Okay, I've saved ${medication_info.name} to your patient history.`);
+                        });
+
+                        saveNoButton.addEventListener('click', () => {
+                            savePromptMessage.remove(); // Remove prompt after action
+                            addMessage('bot', "No problem, I won't save it this time.");
+                            speakBotResponse("No problem, I won't save it this time.");
+                        });
+
+                        speakBotResponse(`Would you like me to save ${medication_info.name} to your patient history for future reference?`);
+
+                    }, 1500); // Delay prompt slightly
+                }
+
+                if (is_general_advice && !lowerCaseSymptom.includes("help") && !lowerCaseSymptom.includes("what can i ask")) {
+                    setTimeout(() => {
+                        addMessage('bot', "If you're unsure what to ask, click the **<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='currentColor' class='w-4 h-4 inline-block align-middle'><path fill-rule='evenodd' d='M12 2.25c-5.385 0-9.75 4.365-9.75 9.75s4.365 9.75 9.75 9.75 9.75-4.365 9.75-9.75S17.385 2.25 12 2.25zM12.75 9a.75.75 0 00-1.5 0v2.25H9a.75.75 0 000 1.5h2.25V15a.75.75 0 001.5 0v-2.25H15a.75.75 0 000-1.5h-2.25V9z' clip-rule='evenodd' /></svg>** button on the right for some suggestions!");
+                    }, 2000);
+                }
+
+
+            } catch (error) {
+                console.error('Error in backend simulation or API call:', error);
+                removeTypingIndicator();
+                let errorMessage = `Sorry, I'm having trouble processing your request. Please try again. Error: ${error.message}`;
+                addMessage('bot', errorMessage, 'error-message');
+            }
+        }
+
+        // --- Event Listeners ---
+        sendButton.addEventListener('click', () => {
+            const text = userInput.value.trim();
+            if (text) {
+                // Cancel any ongoing speech when user types/sends new message
+                if (window.speechSynthesis.speaking) {
+                    window.speechSynthesis.cancel();
+                    if (currentUtterance && currentUtterance.speakerIcon) {
+                        currentUtterance.speakerIcon.classList.remove('speaking');
+                    }
+                }
+                addMessage('user', text);
+                userInput.value = '';
+                sendSymptomsToBackend(text);
+                // Hide suggestions panel if user types and it's open
+                if (suggestionsPanel.classList.contains('is-active')) {
+                    suggestionsPanel.classList.remove('is-active');
+                }
+            }
+        });
+
+        userInput.addEventListener('keypress', (event) => {
+            if (event.key === 'Enter') {
+                sendButton.click();
+            }
+        });
+
+        // --- Panel Toggle Logic ---
+        toggleHistoryPanelButton.addEventListener('click', () => {
+            patientHistoryPanel.classList.toggle('is-active');
+            if (patientHistoryPanel.classList.contains('is-active')) {
+                suggestionsPanel.classList.remove('is-active'); // Close other panel
+                renderPatientHistory(); // Ensure history is up-to-date when panel opens
+            }
+        });
+
+        toggleSuggestionsPanelButton.addEventListener('click', () => {
+            suggestionsPanel.classList.toggle('is-active');
+            if (suggestionsPanel.classList.contains('is-active')) {
+                patientHistoryPanel.classList.remove('is-active'); // Close other panel
+            }
+        });
+
+        // Handle clicking a suggestion item from "What Can I Ask?" panel
+        suggestionItems.forEach(item => {
+            item.addEventListener('click', (event) => {
+                // Remove Markdown bold from suggestion text before setting as input
+                const suggestionText = event.target.textContent.trim().replace(/\*\*(.*?)\*\*/g, '$1'); 
+                userInput.value = suggestionText;
+                suggestionsPanel.classList.remove('is-active'); // Hide panel after selection
+                userInput.focus(); 
+                sendButton.click(); // Automatically send the suggestion as input
+            });
+        });
+
+        // Initial bot message on load & Load persistent data
+        document.addEventListener('DOMContentLoaded', () => {
+            loadPatientData(); // Load data first
+            addMessage('bot', "Hello! I'm VoiceDoc AI, your intelligent healthcare assistant. How can I help you today? Try typing your symptoms, or use the mic button to speak.");
+            
+            // Initial prompt for patient info if not set
+            setTimeout(() => {
+                if (patientData.name === "N/A" || patientData.age === "N/A" || patientData.gender === "N/A") {
+                    const infoPromptMessage = document.createElement('div');
+                    infoPromptMessage.classList.add('message', 'bot', 'patient-info-prompt');
+                    infoPromptMessage.innerHTML = `
+                        To provide more personalized assistance, would you like to tell me your name, age, and gender? (e.g., 'My name is John', 'My age is 30', 'I am a female').
+                        <div class="prompt-buttons">
+                            <button class="info-yes">Yes</button>
+                            <button class="info-no">No</button>
+                        </div>
+                    `;
+                    chatMessages.appendChild(infoPromptMessage);
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+
+                    const infoYesButton = infoPromptMessage.querySelector('.info-yes');
+                    const infoNoButton = infoPromptMessage.querySelector('.info-no');
+
+                    infoYesButton.addEventListener('click', () => {
+                        infoPromptMessage.remove();
+                        addMessage('bot', "Great! Just type or say 'My name is [Your Name]', 'My age is [Your Age]', or 'I am a [Male/Female]' to update your profile.");
+                        speakBotResponse("Great! Just type or say 'My name is Your Name', 'My age is Your Age', or 'I am a Male or Female' to update your profile.");
+                    });
+
+                    infoNoButton.addEventListener('click', () => {
+                        infoPromptMessage.remove();
+                        addMessage('bot', "No problem, we can continue without that information.");
+                        speakBotResponse("No problem, we can continue without that information.");
+                    });
+                    speakBotResponse("To provide more personalized assistance, would you like to tell me your name, age, and gender?");
+                } else {
+                    speakBotResponse("Hello! I'm VoiceDoc AI, your intelligent healthcare assistant. How can I help you today?");
+                }
+            }, 1000); 
+            
+            // Open the suggestions panel automatically at the start for hackathon demo
+            setTimeout(() => {
+                suggestionsPanel.classList.add('is-active');
+            }, 2500); 
+        });
+    </script>
+</body>
+</html>
