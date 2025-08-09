@@ -4,7 +4,7 @@
 
 • The frontend handles everything the user sees and interacts with.
 
-🌐** Language Selection**
+🌐**Language Selection**
 
 • Users can select their preferred language for speech input using a dropdown.
 
